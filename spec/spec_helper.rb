@@ -3,8 +3,10 @@ require 'sequel-full-text-search'
 
 require 'minitest/autorun'
 require 'minitest/pride'
+require 'minitest/hooks'
 
 require 'faker'
+require 'pry'
 
 Sequel.extension :full_text_search
 
@@ -32,6 +34,11 @@ DB.create_table :albums do
 
   text :name
   text :description
+
+  integer :track_count,  null: false
+  boolean :high_quality, null: false
+  date    :release_date, null: false
+  numeric :money_made,   null: false
 
   tsvector :searchable_text, null: false
 
@@ -83,9 +90,13 @@ album_ids = DB[:albums].multi_insert(
   artist_ids.map { |artist_id|
     10.times.map {
       {
-        artist_id:   artist_id,
-        name:        Faker::Lorem.sentence,
-        description: Faker::Hipster.paragraph,
+        artist_id:    artist_id,
+        name:         Faker::Lorem.sentence,
+        description:  Faker::Hipster.paragraph,
+        track_count:  (8..14).to_a.sample,
+        high_quality: rand > 0.7,
+        release_date: Date.today - (rand * 5 * 365).round,
+        money_made:   (rand * 100000000).round(2),
       }
     }
   }.flatten(1),
@@ -116,4 +127,14 @@ end
 
 class Track < Sequel::Model
   many_to_one :album
+end
+
+class SequelFTSSpec < Minitest::Spec
+  include Minitest::Hooks
+
+  make_my_diffs_pretty!
+
+  def around
+    DB.transaction(rollback: :always, savepoint: true, auto_savepoint: true) { super }
+  end
 end

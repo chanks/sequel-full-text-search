@@ -13,6 +13,14 @@ module Sequel
           language: 'english'.freeze
         )
       end
+
+      def facets(*columns)
+        result = {}
+        columns.each do |column|
+          result[column] = unordered.group_by(column).select_hash(column, Sequel.as(SQL::Function.new(:count, Sequel.lit('*')), :count))
+        end
+        result
+      end
     end
   end
 
