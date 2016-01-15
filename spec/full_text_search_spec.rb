@@ -43,5 +43,27 @@ class FullTextSearchSpec < SequelFTSSpec
 
       assert_equal(expected, result)
     end
+
+    it "should respect other filters on the dataset" do
+      result = DB[:albums].text_search('popular').where{track_count > 10}.facets(:track_count, :high_quality)
+
+      track_counts = {}
+      high_quality = {}
+
+      @albums.select{|a| a.track_count > 10}.each do |album|
+        track_counts[album.track_count] ||= 0
+        track_counts[album.track_count]  += 1
+
+        high_quality[album.high_quality] ||= 0
+        high_quality[album.high_quality]  += 1
+      end
+
+      expected = {
+        track_count: track_counts,
+        high_quality: high_quality,
+      }
+
+      assert_equal(expected, result)
+    end
   end
 end
