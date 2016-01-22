@@ -59,7 +59,7 @@ DB.create_table :tracks do
 end
 
 [:artists, :albums, :tracks].each do |table|
-  DB.drop_function("#{table}_set_searchable_text".to_sym)
+  DB.drop_function("#{table}_set_searchable_text".to_sym, if_exists: true)
 
   DB.run <<-SQL
     CREATE FUNCTION #{table}_set_searchable_text() RETURNS trigger AS $$
