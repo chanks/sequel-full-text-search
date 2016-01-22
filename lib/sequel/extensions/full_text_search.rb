@@ -20,12 +20,12 @@ module Sequel
         results       = {}
         count_columns = {}
         selections    = []
+        aggregate     = COUNT_FUNCTION
 
         columns.each do |column|
-          count_column          = "#{column}_count".to_sym
-          results[column]       = {}
-          count_columns[column] = count_column
-          aggregate             = COUNT_FUNCTION
+          count_columns[column] = count_column = "#{column}_count".to_sym
+
+          results[column] = {}
 
           if (filter = filters.except(column)).any?
             aggregate = aggregate.filter(SQL::BooleanExpression.from_value_pairs(filter))
