@@ -45,8 +45,9 @@ module Sequel
         ds.each do |row|
           columns.each do |column|
             value = row.fetch(column)
-            unless value.nil?
-              results[column][value] = row.fetch("#{column}_count".to_sym)
+            count = row.fetch("#{column}_count".to_sym)
+            unless value.nil? || count.zero?
+              results[column][value] = count
             end
           end
         end
