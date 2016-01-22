@@ -50,8 +50,8 @@ class FullTextSearchSpec < SequelFTSSpec
       assert_equal(expected, result)
     end
 
-    it "should respect a filter on a value" do
-      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10]})
+    it "should respect a single filter on a value" do
+      result = ds.facets([:track_count, :high_quality], filters: {track_count: 10})
 
       expected = {
         track_count: counts_of_column(ds, :track_count),
@@ -62,7 +62,7 @@ class FullTextSearchSpec < SequelFTSSpec
     end
 
 
-    it "should respect a filter on multiple values" do
+    it "should respect a single filter on multiple values" do
       result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12]})
 
       expected = {
@@ -73,8 +73,8 @@ class FullTextSearchSpec < SequelFTSSpec
       assert_equal(expected, result)
     end
 
-    it "should respect filters on multiple values" do
-      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: [true]})
+    it "should respect two distinct filters" do
+      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: true})
 
       expected = {
         track_count: counts_of_column(ds.where(:high_quality), :track_count),
