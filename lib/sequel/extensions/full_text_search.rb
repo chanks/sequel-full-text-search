@@ -2,8 +2,11 @@ require 'sequel/extensions/full_text_search/version'
 
 module Sequel
   module FullTextSearch
+    class Error < StandardError; end
+
     module DatasetMethods
       COUNT_FUNCTION = Sequel.function(:count, Sequel.lit('*')).freeze
+      OPTS = {}.freeze
 
       def text_search(text)
         full_text_search(
@@ -16,11 +19,16 @@ module Sequel
         )
       end
 
-      def facets(columns, filters: {})
+      def facets(columns, filters: OPTS)
         results       = {}
         count_columns = {}
         selections    = []
         aggregate     = COUNT_FUNCTION
+
+        # Make sure filters make sense.
+        filters.each do |column, values|
+          raise Error, "You tried to filter on '#{column}' without faceting on it" unless columns.include?(column)
+        end
 
         columns.each do |column|
           count_columns[column] = count_column = "#{column}_count".to_sym

@@ -52,6 +52,11 @@ class FullTextSearchSpec < SequelFTSSpec
       assert_equal(expected, result)
     end
 
+    it "should raise an error when a filter doesn't match a provided column" do
+      error = assert_raises(Sequel::FullTextSearch::Error) { ds.facets([:track_count, :high_quality], filters: {number_of_stars: 4}) }
+      assert_equal "You tried to filter on 'number_of_stars' without faceting on it", error.message
+    end
+
     it "should respect a single filter on a value" do
       result = ds.facets([:track_count, :high_quality, :number_of_stars], filters: {track_count: 10})
 
