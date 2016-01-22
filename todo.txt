@@ -1,0 +1,9 @@
+Grab all facets in an efficient single query.
+
+Result highlighting.
+
+Migration helpers.
+
+Better options for text search quality.
+
+Look through the PG text search docs for more ideas.
