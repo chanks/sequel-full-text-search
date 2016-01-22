@@ -35,10 +35,11 @@ DB.create_table :albums do
   text :name
   text :description
 
-  integer :track_count,  null: false
-  boolean :high_quality, null: false
-  date    :release_date, null: false
-  numeric :money_made,   null: false
+  integer :track_count,     null: false
+  boolean :high_quality,    null: false
+  integer :number_of_stars, null: false
+  date    :release_date,    null: false
+  numeric :money_made,      null: false
 
   tsvector :searchable_text, null: false
 
@@ -90,13 +91,14 @@ album_ids = DB[:albums].multi_insert(
   artist_ids.map { |artist_id|
     10.times.map {
       {
-        artist_id:    artist_id,
-        name:         Faker::Lorem.sentence,
-        description:  Faker::Hipster.paragraph,
-        track_count:  (8..14).to_a.sample,
-        high_quality: rand > 0.7,
-        release_date: Date.today - (rand * 5 * 365).round,
-        money_made:   (rand * 100000000).round(2),
+        artist_id:       artist_id,
+        name:            Faker::Lorem.sentence,
+        description:     Faker::Hipster.paragraph,
+        track_count:     (8..14).to_a.sample,
+        high_quality:    rand > 0.7,
+        number_of_stars: rand(5),
+        release_date:    Date.today - (rand * 5 * 365).round,
+        money_made:      (rand * 100000000).round(2),
       }
     }
   }.flatten(1),

@@ -29,33 +29,36 @@ class FullTextSearchSpec < SequelFTSSpec
     end
 
     it "should return aggregates on the total count of records for each passed facet" do
-      result = ds.facets([:track_count, :high_quality])
+      result = ds.facets([:track_count, :high_quality, :number_of_stars])
 
       expected = {
-        track_count: counts_of_column(ds, :track_count),
-        high_quality: counts_of_column(ds, :high_quality),
+        track_count:     counts_of_column(ds, :track_count),
+        high_quality:    counts_of_column(ds, :high_quality),
+        number_of_stars: counts_of_column(ds, :number_of_stars)
       }
 
       assert_equal(expected, result)
     end
 
     it "should respect other filters on the dataset" do
-      result = ds.where{track_count > 10}.facets([:track_count, :high_quality])
+      result = ds.where{track_count > 10}.facets([:track_count, :high_quality, :number_of_stars])
 
       expected = {
-        track_count: counts_of_column(ds.where{track_count > 10}, :track_count),
-        high_quality: counts_of_column(ds.where{track_count > 10}, :high_quality),
+        track_count:     counts_of_column(ds.where{track_count > 10}, :track_count),
+        high_quality:    counts_of_column(ds.where{track_count > 10}, :high_quality),
+        number_of_stars: counts_of_column(ds.where{track_count > 10}, :number_of_stars)
       }
 
       assert_equal(expected, result)
     end
 
     it "should respect a single filter on a value" do
-      result = ds.facets([:track_count, :high_quality], filters: {track_count: 10})
+      result = ds.facets([:track_count, :high_quality, :number_of_stars], filters: {track_count: 10})
 
       expected = {
-        track_count: counts_of_column(ds, :track_count),
-        high_quality: counts_of_column(ds.where(track_count: 10), :high_quality),
+        track_count:     counts_of_column(ds, :track_count),
+        high_quality:    counts_of_column(ds.where(track_count: 10), :high_quality),
+        number_of_stars: counts_of_column(ds.where(track_count: 10), :number_of_stars)
       }
 
       assert_equal(expected, result)
@@ -63,22 +66,24 @@ class FullTextSearchSpec < SequelFTSSpec
 
 
     it "should respect a single filter on multiple values" do
-      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12]})
+      result = ds.facets([:track_count, :high_quality, :number_of_stars], filters: {track_count: [10, 12]})
 
       expected = {
-        track_count: counts_of_column(ds, :track_count),
-        high_quality: counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
+        track_count:     counts_of_column(ds, :track_count),
+        high_quality:    counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
+        number_of_stars: counts_of_column(ds.where(track_count: [10, 12]), :number_of_stars),
       }
 
       assert_equal(expected, result)
     end
 
     it "should respect two distinct filters" do
-      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: true})
+      result = ds.facets([:track_count, :high_quality, :number_of_stars], filters: {track_count: [10, 12], high_quality: true})
 
       expected = {
-        track_count: counts_of_column(ds.where(:high_quality), :track_count),
-        high_quality: counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
+        track_count:     counts_of_column(ds.where(:high_quality), :track_count),
+        high_quality:    counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
+        number_of_stars: counts_of_column(ds.where(:high_quality).where(track_count: [10, 12]), :number_of_stars),
       }
 
       assert_equal(expected, result)

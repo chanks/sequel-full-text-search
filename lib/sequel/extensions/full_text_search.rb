@@ -21,13 +21,7 @@ module Sequel
           aggregate = Sequel.function(:count, Sequel.lit('*'))
 
           if (filter = filters.except(column)).any?
-            if filter.length == 1
-              aggregate = aggregate.filter(filter)
-            else
-              raise
-              # ?
-              # aggregate = aggregate.filter(filter.inject{|a,b| ::Sequel::SQL::BooleanExpression.new(:AND, a, b)})
-            end
+            aggregate = aggregate.filter(::Sequel::SQL::BooleanExpression.from_value_pairs(filter))
           end
 
           [column, aggregate.as("#{column}_count".to_sym)]
