@@ -14,7 +14,7 @@ module Sequel
         )
       end
 
-      def facets(*columns)
+      def facets(columns)
         result = {}
         columns.each do |column|
           result[column] = unordered.group_by(column).select_hash(column, Sequel.as(SQL::Function.new(:count, Sequel.lit('*')), :count))

@@ -23,7 +23,7 @@ class FullTextSearchSpec < SequelFTSSpec
     end
 
     it "should return aggregates on the total count of records for each passed facet" do
-      result = DB[:albums].text_search('popular').facets(:track_count, :high_quality)
+      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality])
 
       track_counts = {}
       high_quality = {}
@@ -45,7 +45,7 @@ class FullTextSearchSpec < SequelFTSSpec
     end
 
     it "should respect other filters on the dataset" do
-      result = DB[:albums].text_search('popular').where{track_count > 10}.facets(:track_count, :high_quality)
+      result = DB[:albums].text_search('popular').where{track_count > 10}.facets([:track_count, :high_quality])
 
       track_counts = {}
       high_quality = {}
