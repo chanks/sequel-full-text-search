@@ -65,5 +65,79 @@ class FullTextSearchSpec < SequelFTSSpec
 
       assert_equal(expected, result)
     end
+
+    it "should respect filters passed to the facets argument" do
+      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10]})
+
+      track_counts = {}
+      high_quality = {}
+
+      @albums.each do |album|
+        if album.track_count == 10
+          high_quality[album.high_quality] ||= 0
+          high_quality[album.high_quality]  += 1
+        end
+
+        track_counts[album.track_count] ||= 0
+        track_counts[album.track_count]  += 1
+      end
+
+      expected = {
+        track_count: track_counts,
+        high_quality: high_quality,
+      }
+
+      assert_equal(expected, result)
+
+
+
+      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10, 12]})
+
+      track_counts = {}
+      high_quality = {}
+
+      @albums.each do |album|
+        if [10, 12].include?(album.track_count)
+          high_quality[album.high_quality] ||= 0
+          high_quality[album.high_quality]  += 1
+        end
+
+        track_counts[album.track_count] ||= 0
+        track_counts[album.track_count]  += 1
+      end
+
+      expected = {
+        track_count: track_counts,
+        high_quality: high_quality,
+      }
+
+      assert_equal(expected, result)
+
+
+
+      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: [true]})
+
+      track_counts = {}
+      high_quality = {}
+
+      @albums.each do |album|
+        if [10, 12].include?(album.track_count)
+          high_quality[album.high_quality] ||= 0
+          high_quality[album.high_quality]  += 1
+        end
+
+        if album.high_quality
+          track_counts[album.track_count] ||= 0
+          track_counts[album.track_count]  += 1
+        end
+      end
+
+      expected = {
+        track_count: track_counts,
+        high_quality: high_quality,
+      }
+
+      assert_equal(expected, result)
+    end
   end
 end
