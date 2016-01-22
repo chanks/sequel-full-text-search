@@ -1,4 +1,4 @@
-Grab all facets in an efficient single query.
+In faceting, support column values that are actually nil?
 
 Result highlighting.
 
