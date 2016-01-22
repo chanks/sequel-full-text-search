@@ -24,8 +24,15 @@ class FullTextSearchSpec < SequelFTSSpec
 
     let(:ds) { DB[:albums].text_search('popular') }
 
-    def counts_of_column(ds, column)
-      ds.unordered.group_by(column).select_hash(column, Sequel.as(Sequel::SQL::Function.new(:count, Sequel.lit('*')), :count))
+    def counts_of_column(ds, expression)
+      exp =
+        case expression
+        when Symbol                         then expression
+        when Sequel::SQL::AliasedExpression then expression.expression
+        else raise "Bad expression: #{expression}"
+        end
+
+      ds.unordered.group_by(exp).select_hash(Sequel.as(exp, :value), Sequel.as(Sequel::SQL::Function.new(:count, Sequel.lit('*')), :count))
     end
 
     it "should return aggregates on the total count of records for each passed facet" do
@@ -89,6 +96,28 @@ class FullTextSearchSpec < SequelFTSSpec
         track_count:     counts_of_column(ds.where(:high_quality), :track_count),
         high_quality:    counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
         number_of_stars: counts_of_column(ds.where(:high_quality).where(track_count: [10, 12]), :number_of_stars),
+      }
+
+      assert_equal(expected, result)
+    end
+
+    it "should respect facets on arbitrary expressions" do
+      result = ds.facets([Sequel.extract(:month, :release_date).as(:month_of_year), :high_quality], filters: {high_quality: true})
+
+      expected = {
+        month_of_year: counts_of_column(ds.where(:high_quality), Sequel.extract(:month, :release_date).as(:month_of_year)),
+        high_quality:  counts_of_column(ds, :high_quality),
+      }
+
+      assert_equal(expected, result)
+    end
+
+    it "should respect filters on facets that are arbitrary expressions" do
+      result = ds.facets([Sequel.extract(:month, :release_date).as(:month_of_year), :high_quality], filters: {high_quality: true, month_of_year: 3})
+
+      expected = {
+        month_of_year: counts_of_column(ds.where(:high_quality), Sequel.extract(:month, :release_date).as(:month_of_year)),
+        high_quality:  counts_of_column(ds.where(Sequel.extract(:month, :release_date) => 3), :high_quality),
       }
 
       assert_equal(expected, result)

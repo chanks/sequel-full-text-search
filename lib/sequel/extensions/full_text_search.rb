@@ -19,35 +19,76 @@ module Sequel
         )
       end
 
-      def facets(columns, filters: OPTS)
-        results       = {}
-        count_columns = {}
-        selections    = []
-        aggregate     = COUNT_FUNCTION
+      def facets(inputs, filters: OPTS)
+        count_names = {}
+        expressions = {}
+        results     = {}
 
-        # Make sure filters make sense.
-        filters.each do |column, values|
-          raise Error, "You tried to filter on '#{column}' without faceting on it" unless columns.include?(column)
-        end
+        # First a bit of housekeeping - figure out what the expressions we're
+        # grouping by and the aliases we're using are.
+        inputs.each do |input|
+          name = expression = nil
 
-        columns.each do |column|
-          count_columns[column] = count_column = "#{column}_count".to_sym
-
-          results[column] = {}
-
-          if (filter = filters.except(column)).any?
-            aggregate = aggregate.filter(SQL::BooleanExpression.from_value_pairs(filter))
+          case input
+          when Symbol
+            name       = input
+            expression = input
+          when SQL::AliasedExpression
+            name       = input.aliaz
+            expression = input.expression
+          else
+            raise Error, "Unsupported input to Dataset#facets: #{input.class}"
           end
 
-          selections << column << aggregate.as(count_column)
+          count_names[name] = "#{name}_count".to_sym
+          expressions[name] = expression
+          results[name]     = {}
         end
 
-        naked.unordered.group_by(*columns).grouping_sets.select(*selections).each do |row|
-          count_columns.each do |column, count_column|
-            next if (value = row.fetch(column)).nil?
-            next if (count = row.fetch(count_column)).zero?
+        # Make sure the filters we were given make sense.
+        filters.each do |name, values|
+          unless expressions.has_key?(name)
+            raise Error, "You tried to filter on '#{name}' without faceting on it"
+          end
+        end
 
-            results[column][value] = count
+        # Now to accumulate the actual SELECT components we'll pass to the DB.
+        selections = []
+
+        expressions.each do |name, expression|
+          aggregate = COUNT_FUNCTION
+
+          # Figure out what filters to apply to an aggregate, considering that
+          # we don't want filters on an expression to affect that expression's
+          # own facets.
+          if (filter = filters.except(name)).any?
+            new_filter = {}
+
+            filter.each do |name, value|
+              new_filter[expressions[name]] = value
+            end
+
+            aggregate = aggregate.filter(SQL::BooleanExpression.from_value_pairs(new_filter))
+          end
+
+          selections << Sequel.as(expression, name) << Sequel.as(aggregate, count_names[name])
+        end
+
+        # Build the actual query.
+        ds =
+          naked.
+          unordered.
+          group_by(*expressions.values).
+          grouping_sets.
+          select(*selections)
+
+        # Iterate over rows so we can use streaming if it's enabled.
+        ds.each do |row|
+          count_names.each do |name, count_name|
+            next if (value = row.fetch(name)).nil?
+            next if (count = row.fetch(count_name)).zero?
+
+            results[name][value] = count
           end
         end
 
