@@ -18,123 +18,67 @@ class FullTextSearchSpec < SequelFTSSpec
 
   describe "Dataset#facets" do
     before do
-      @albums = Album.order_by{random{}}.first(20)
-      @albums.each { |a| a.update description: 'popular' }
+      ids = Album.order_by{random{}}.limit(20).select_map(:id)
+      Album.where(id: ids).update(description: 'popular')
+    end
+
+    let(:ds) { DB[:albums].text_search('popular') }
+
+    def counts_of_column(ds, column)
+      ds.unordered.group_by(column).select_hash(column, Sequel.as(Sequel::SQL::Function.new(:count, Sequel.lit('*')), :count))
     end
 
     it "should return aggregates on the total count of records for each passed facet" do
-      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality])
-
-      track_counts = {}
-      high_quality = {}
-
-      @albums.each do |album|
-        track_counts[album.track_count] ||= 0
-        track_counts[album.track_count]  += 1
-
-        high_quality[album.high_quality] ||= 0
-        high_quality[album.high_quality]  += 1
-      end
+      result = ds.facets([:track_count, :high_quality])
 
       expected = {
-        track_count: track_counts,
-        high_quality: high_quality,
+        track_count: counts_of_column(ds, :track_count),
+        high_quality: counts_of_column(ds, :high_quality),
       }
 
       assert_equal(expected, result)
     end
 
     it "should respect other filters on the dataset" do
-      result = DB[:albums].text_search('popular').where{track_count > 10}.facets([:track_count, :high_quality])
-
-      track_counts = {}
-      high_quality = {}
-
-      @albums.select{|a| a.track_count > 10}.each do |album|
-        track_counts[album.track_count] ||= 0
-        track_counts[album.track_count]  += 1
-
-        high_quality[album.high_quality] ||= 0
-        high_quality[album.high_quality]  += 1
-      end
+      result = ds.where{track_count > 10}.facets([:track_count, :high_quality])
 
       expected = {
-        track_count: track_counts,
-        high_quality: high_quality,
+        track_count: counts_of_column(ds.where{track_count > 10}, :track_count),
+        high_quality: counts_of_column(ds.where{track_count > 10}, :high_quality),
       }
 
       assert_equal(expected, result)
     end
 
-    it "should respect filters passed to the facets argument" do
-      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10]})
-
-      track_counts = {}
-      high_quality = {}
-
-      @albums.each do |album|
-        if album.track_count == 10
-          high_quality[album.high_quality] ||= 0
-          high_quality[album.high_quality]  += 1
-        end
-
-        track_counts[album.track_count] ||= 0
-        track_counts[album.track_count]  += 1
-      end
+    it "should respect a filter on a value" do
+      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10]})
 
       expected = {
-        track_count: track_counts,
-        high_quality: high_quality,
+        track_count: counts_of_column(ds, :track_count),
+        high_quality: counts_of_column(ds.where(track_count: 10), :high_quality),
       }
 
       assert_equal(expected, result)
+    end
 
 
-
-      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10, 12]})
-
-      track_counts = {}
-      high_quality = {}
-
-      @albums.each do |album|
-        if [10, 12].include?(album.track_count)
-          high_quality[album.high_quality] ||= 0
-          high_quality[album.high_quality]  += 1
-        end
-
-        track_counts[album.track_count] ||= 0
-        track_counts[album.track_count]  += 1
-      end
+    it "should respect a filter on multiple values" do
+      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12]})
 
       expected = {
-        track_count: track_counts,
-        high_quality: high_quality,
+        track_count: counts_of_column(ds, :track_count),
+        high_quality: counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
       }
 
       assert_equal(expected, result)
+    end
 
-
-
-      result = DB[:albums].text_search('popular').facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: [true]})
-
-      track_counts = {}
-      high_quality = {}
-
-      @albums.each do |album|
-        if [10, 12].include?(album.track_count)
-          high_quality[album.high_quality] ||= 0
-          high_quality[album.high_quality]  += 1
-        end
-
-        if album.high_quality
-          track_counts[album.track_count] ||= 0
-          track_counts[album.track_count]  += 1
-        end
-      end
+    it "should respect filters on multiple values" do
+      result = ds.facets([:track_count, :high_quality], filters: {track_count: [10, 12], high_quality: [true]})
 
       expected = {
-        track_count: track_counts,
-        high_quality: high_quality,
+        track_count: counts_of_column(ds.where(:high_quality), :track_count),
+        high_quality: counts_of_column(ds.where(track_count: [10, 12]), :high_quality),
       }
 
       assert_equal(expected, result)
