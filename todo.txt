@@ -1,4 +1,6 @@
-In faceting, support column values that are actually nil?
+In faceting, support column values that are actually nil? Or at least filter them out?
+
+In faceting, support faceting on many_to_one associations, and use a column from the parent as the label?
 
 Result highlighting.
 
